@@ -15,11 +15,11 @@ function lcg(seed) {
   }
 }
 
-function seedFromFarmId(farmId) {
+function seedFromId(id) {
   let seed = 2166136261
-  for (let i = 0; i < farmId.length; i += 1) {
+  for (let i = 0; i < id.length; i += 1) {
     // eslint-disable-next-line no-bitwise
-    seed ^= farmId.charCodeAt(i)
+    seed ^= id.charCodeAt(i)
     // eslint-disable-next-line no-bitwise
     seed = Math.imul(seed, 16777619)
   }
@@ -32,11 +32,11 @@ function toZoneId(row, col) {
   return `${letter}${col + 1}`
 }
 
-export async function seedFarmData(farmId, { gridSize = 8 } = {}) {
+export async function seedFarmData(uid, { gridSize = 8 } = {}) {
   if (!db) return
-  if (!farmId) return
+  if (!uid) return
 
-  const rand = lcg(seedFromFarmId(farmId))
+  const rand = lcg(seedFromId(uid))
 
   // Base field conditions
   const baseNdvi = 0.55 + (rand() - 0.5) * 0.08
@@ -127,7 +127,7 @@ export async function seedFarmData(farmId, { gridSize = 8 } = {}) {
     last30.push(score)
   }
 
-  await update(ref(db, `cpde/v1/farms/${farmId}`), {
+  await update(ref(db, `users/${uid}`), {
     'grid/size': gridSize,
     'grid/cells': cells,
     'grid/fieldAverages': fieldAverages,

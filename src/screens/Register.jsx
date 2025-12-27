@@ -2,8 +2,10 @@ import { Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import FieldBoundaryMap from '../widgets/FieldBoundaryMap.jsx'
-import { registerFarm } from '../state/farmSession.js'
 import { seedFarmData } from '../state/seedFarmData.js'
+import { createUserWithEmailAndPassword, signOut } from 'firebase/auth'
+import { push, ref, serverTimestamp, set } from 'firebase/database'
+import { auth, db } from '../config/firebase.js'
 
 const CROPS = ['Rice', 'Corn', 'Wheat', 'Soybean', 'Cotton', 'Vegetables']
 
@@ -11,31 +13,63 @@ export default function Register() {
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [farmName, setFarmName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [cropType, setCropType] = useState('Rice')
   const [polygon, setPolygon] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   const canSubmit = useMemo(() => {
-    return name.trim() && farmName.trim() && cropType && polygon?.length >= 3
-  }, [name, farmName, cropType, polygon])
+    return (
+      name.trim() &&
+      farmName.trim() &&
+      email.trim() &&
+      password &&
+      confirmPassword &&
+      cropType &&
+      polygon?.length >= 3 &&
+      password === confirmPassword
+    )
+  }, [name, farmName, email, password, confirmPassword, cropType, polygon])
 
   async function onSubmit() {
     setError('')
+    if (password !== confirmPassword) {
+      setError('Password mismatch. Please confirm your password.')
+      return
+    }
     setSubmitting(true)
     try {
-      const farmId = await registerFarm({
-        farmerName: name,
-        farmName,
-        cropType,
-        polygon,
+      if (!auth || !db) throw new Error('Firebase is not configured.')
+
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
+      const uid = cred.user.uid
+
+      await set(ref(db, `users/${uid}/profile`), {
+        farmerName: name.trim(),
+        farmName: farmName.trim(),
+        email: email.trim(),
+        createdAt: serverTimestamp(),
       })
 
-      // Hackathon-friendly: seed the new farm with synthetic grid + variance
-      // so the dashboard/analysis is immediately useful.
-      await seedFarmData(farmId, { gridSize: 8 })
+      const fieldsRef = ref(db, `users/${uid}/fields`)
+      const newFieldRef = push(fieldsRef)
+      await set(newFieldRef, {
+        fieldName: farmName.trim(),
+        cropType,
+        geometry: polygon,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
 
-      navigate('/dashboard')
+      // Hackathon-friendly: seed synthetic grid + variance so dashboard/analysis is immediately useful.
+      await seedFarmData(uid, { gridSize: 8 })
+
+      // Default behavior: do not keep the user logged in right after signup.
+      await signOut(auth)
+      navigate('/login', { replace: true })
     } catch (e) {
       setError(e?.message || 'Registration failed. Please try again.')
     } finally {
@@ -57,6 +91,29 @@ export default function Register() {
           <TextField label="Your Name" value={name} onChange={(e) => setName(e.target.value)} />
           <TextField label="Farm Name" value={farmName} onChange={(e) => setFarmName(e.target.value)} />
           <TextField
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+          <TextField
+            label="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <TextField
+            label="Confirm Password"
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            error={Boolean(confirmPassword) && password !== confirmPassword}
+            helperText={Boolean(confirmPassword) && password !== confirmPassword ? 'Password mismatch.' : ' '}
+            autoComplete="new-password"
+          />
+          <TextField
             select
             label="Crop Type"
             value={cropType}
@@ -77,7 +134,7 @@ export default function Register() {
             <FieldBoundaryMap onPolygonChanged={setPolygon} />
           </Box>
 
-          <Button variant="contained" color="primary" disabled={!canSubmit} onClick={onSubmit}>
+          <Button variant="contained" color="primary" disabled={!canSubmit || submitting} onClick={onSubmit}>
             {submitting ? 'Saving…' : 'Save & Start Analysis'}
           </Button>
 

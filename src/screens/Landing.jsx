@@ -4,11 +4,18 @@ import GrassIcon from '@mui/icons-material/Grass'
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
 import ScienceIcon from '@mui/icons-material/Science'
 import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import heroBg from '../assets/background.png'
+import { useAuth } from '../auth/AuthProvider.jsx'
 
 export default function Landing() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+
+  useEffect(() => {
+    if (user) navigate('/dashboard', { replace: true })
+  }, [user, navigate])
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -76,7 +83,7 @@ export default function Landing() {
               <Button
                 variant="contained"
                 size="large"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/login')}
                 aria-label="Farmer login"
                 sx={{
                   bgcolor: '#2D5A27',

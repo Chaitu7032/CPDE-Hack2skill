@@ -11,12 +11,12 @@ import {
 } from '@mui/material'
 import CloseIcon from '@mui/icons-material/Close'
 import { useEffect, useMemo, useState } from 'react'
-import { onValue, ref } from 'firebase/database'
+import { limitToLast, onValue, orderByChild, query, ref } from 'firebase/database'
 import { db } from '../config/firebase.js'
 import { generatePlainEnglishRiskExplanation } from '../config/gemini.js'
 import { MapContainer, TileLayer, Polygon, Rectangle, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getCurrentFarmId } from '../state/farmSession.js'
+import { useAuth } from '../auth/AuthProvider.jsx'
 
 // Core feature: Google Maps + OverlayView NxN grid.
 // Data source: Firebase RTDB at /cpde/demo/grid/cells
@@ -34,8 +34,7 @@ export default function GridMap({ gridSize = 8 }) {
   const [selected, setSelected] = useState(null)
   const [explain, setExplain] = useState('')
   const [fieldPolygon, setFieldPolygon] = useState(() => DEMO_FIELD)
-
-  const farmId = useMemo(() => getCurrentFarmId(), [])
+  const { user } = useAuth()
 
   const tileUrl = useMemo(() => {
     return import.meta.env.VITE_OSM_TILE_URL || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -43,23 +42,33 @@ export default function GridMap({ gridSize = 8 }) {
 
   // Subscribe to Firebase stream
   useEffect(() => {
-    if (!db || !farmId) {
+    if (!db || !user?.uid) {
       setCells({})
       setFieldPolygon(DEMO_FIELD)
       return undefined
     }
 
-    const offCells = onValue(ref(db, `cpde/v1/farms/${farmId}/grid/cells`), (snap) => setCells(snap.val() || {}))
-    const offPoly = onValue(ref(db, `cpde/v1/farms/${farmId}/field/polygon`), (snap) => {
-      const poly = snap.val()
+    const offCells = onValue(ref(db, `users/${user.uid}/grid/cells`), (snap) => setCells(snap.val() || {}))
+
+    // Load the most recently updated field geometry.
+    const latestFieldQuery = query(
+      ref(db, `users/${user.uid}/fields`),
+      orderByChild('updatedAt'),
+      limitToLast(1),
+    )
+
+    const offField = onValue(latestFieldQuery, (snap) => {
+      const obj = snap.val() || {}
+      const last = Object.values(obj)[0]
+      const poly = last?.geometry
       if (Array.isArray(poly) && poly.length >= 3) setFieldPolygon(poly)
     })
 
     return () => {
       offCells()
-      offPoly()
+      offField()
     }
-  }, [farmId])
+  }, [user?.uid])
 
   const fieldAverages = useMemo(() => {
     const arr = Object.values(cells || {}).filter(Boolean)

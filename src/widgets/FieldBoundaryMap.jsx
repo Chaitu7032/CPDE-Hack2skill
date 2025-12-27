@@ -6,7 +6,7 @@ import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw/dist/leaflet.draw.css'
 import 'leaflet-draw'
 
-const DEFAULT_CENTER = [20.5937, 78.9629] // India
+const DEFAULT_CENTER = [20.5937, 78.9629]
 const MIN_POINTS = 3
 const MAX_POINTS = 6
 
@@ -14,9 +14,10 @@ export default function FieldBoundaryMap({ onPolygonChanged }) {
   const fgRef = useRef(null)
   const [status, setStatus] = useState('Tap the polygon tool, then draw your field.')
 
-  const tileUrl = useMemo(() => {
-    return import.meta.env.VITE_OSM_TILE_URL || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-  }, [])
+  const tileUrl = useMemo(
+    () => import.meta.env.VITE_OSM_TILE_URL || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    []
+  )
 
   function clearPolygon() {
     fgRef.current?.clearLayers()
@@ -26,35 +27,28 @@ export default function FieldBoundaryMap({ onPolygonChanged }) {
 
   function emitPolygon(layer) {
     try {
-      const latLngs = layer.getLatLngs?.()
-      const ring = Array.isArray(latLngs?.[0]) ? latLngs[0] : latLngs
-      const raw = ring || []
+      const latLngs = layer.getLatLngs()?.[0] || []
 
-      if (raw.length > MAX_POINTS) {
-        const clamped = raw.slice(0, MAX_POINTS)
-        // Enforce max points even if user tries to edit-add more vertices.
-        if (Array.isArray(latLngs?.[0])) {
-          layer.setLatLngs([clamped])
-        } else {
-          layer.setLatLngs(clamped)
-        }
-        layer.redraw?.()
-        setStatus(`Maximum ${MAX_POINTS} points allowed. Extra points were removed.`)
+      // Clamp to MAX_POINTS
+      if (latLngs.length > MAX_POINTS) {
+        layer.setLatLngs([latLngs.slice(0, MAX_POINTS)])
       }
 
-      const latLngsAfter = layer.getLatLngs?.()
-      const ringAfter = Array.isArray(latLngsAfter?.[0]) ? latLngsAfter[0] : latLngsAfter
-      const pts = (ringAfter || []).map((p) => ({ lat: p.lat, lng: p.lng }))
+      const final = (layer.getLatLngs()?.[0] || []).map(p => ({
+        lat: p.lat,
+        lng: p.lng,
+      }))
 
-      onPolygonChanged?.(pts.length >= MIN_POINTS ? pts : null)
-
-      if (pts.length < MIN_POINTS) {
-        setStatus(`Add at least ${MIN_POINTS} points to form a valid field boundary.`)
-      } else if (pts.length >= MIN_POINTS && pts.length <= MAX_POINTS) {
-        setStatus(`Field captured (${pts.length} points).`)
+      if (final.length < MIN_POINTS) {
+        setStatus(`Add at least ${MIN_POINTS} points.`)
+        onPolygonChanged?.(null)
+        return
       }
+
+      setStatus(`Field captured (${final.length} points).`)
+      onPolygonChanged?.(final)
     } catch {
-      setStatus('Could not read polygon. Try again.')
+      setStatus('Could not read polygon.')
     }
   }
 
@@ -70,32 +64,22 @@ export default function FieldBoundaryMap({ onPolygonChanged }) {
             bgcolor: 'grey.100',
           }}
         >
-          <MapContainer
-            center={DEFAULT_CENTER}
-            zoom={5}
-            style={{ height: '100%', width: '100%' }}
-            scrollWheelZoom
-          >
-            <TileLayer
-              url={tileUrl}
-              attribution='&copy; OpenStreetMap contributors'
-            />
+          <MapContainer center={DEFAULT_CENTER} zoom={5} style={{ height: '100%', width: '100%' }}>
+            <TileLayer url={tileUrl} attribution="&copy; OpenStreetMap contributors" />
 
             <LeafletDrawController
               fgRef={fgRef}
-              onCreated={(layer) => {
-                emitPolygon(layer)
-              }}
-              onEdited={(layer) => {
-                emitPolygon(layer)
-              }}
-              onStatus={(s) => setStatus(s)}
+              onCreated={emitPolygon}
+              onEdited={emitPolygon}
+              onStatus={setStatus}
             />
           </MapContainer>
         </Box>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
-          <Typography sx={{ fontWeight: 700, color: 'text.secondary', flex: 1 }}>{status}</Typography>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center">
+          <Typography sx={{ fontWeight: 700, color: 'text.secondary', flex: 1 }}>
+            {status}
+          </Typography>
           <Button variant="outlined" color="secondary" onClick={clearPolygon}>
             Clear
           </Button>
@@ -105,17 +89,16 @@ export default function FieldBoundaryMap({ onPolygonChanged }) {
   )
 }
 
+/* ===========================
+   Leaflet Draw Controller
+=========================== */
 function LeafletDrawController({ fgRef, onCreated, onEdited, onStatus }) {
   const map = useMap()
 
   useEffect(() => {
-    // Feature group to hold the polygon
-    const fg = new L.FeatureGroup()
-    fgRef.current = fg
-    map.addLayer(fg)
-
-    // Track the active polygon layer so we can allow adding points after creation.
-    let activePolygonLayer = null
+    const featureGroup = new L.FeatureGroup()
+    fgRef.current = featureGroup
+    map.addLayer(featureGroup)
 
     const drawControl = new L.Control.Draw({
       position: 'topright',
@@ -137,91 +120,67 @@ function LeafletDrawController({ fgRef, onCreated, onEdited, onStatus }) {
         },
       },
       edit: {
-        featureGroup: fg,
-        edit: {
-          selectedPathOptions: {
-            color: '#1B5E20',
-            weight: 3,
-            fillOpacity: 0.22,
-          },
-        },
+        featureGroup,
         remove: false,
       },
     })
 
     map.addControl(drawControl)
-    onStatus?.('Tap the polygon tool, then draw your field.')
+    onStatus?.('Tap polygon tool and draw 3 points.and click finish to capture field boundary.')
 
+    // ───────── CREATED ─────────
     const onDrawCreated = (e) => {
-      // Keep only one polygon at a time
-      fg.clearLayers()
-      fg.addLayer(e.layer)
-      activePolygonLayer = e.layer
-      onCreated?.(e.layer)
-      onStatus?.(`Field captured. Use ${MIN_POINTS}–${MAX_POINTS} points.`)
+      featureGroup.clearLayers()
+
+      const layer = e.layer
+      const points = layer.getLatLngs()?.[0] || []
+
+      if (points.length < MIN_POINTS) {
+        onStatus?.(`Minimum ${MIN_POINTS} points required.`)
+        return
+      }
+
+      if (points.length > MAX_POINTS) {
+        layer.setLatLngs([points.slice(0, MAX_POINTS)])
+      }
+
+      featureGroup.addLayer(layer)
+      onCreated?.(layer)
+
+      onStatus?.(`Field captured (${Math.min(points.length, MAX_POINTS)} points).`)
     }
 
+    // ───────── EDITED ─────────
     const onDrawEdited = (e) => {
       e.layers.eachLayer((layer) => {
-        activePolygonLayer = layer
+        let ring = layer.getLatLngs()?.[0] || []
+
+        if (ring.length > MAX_POINTS) {
+          ring = ring.slice(0, MAX_POINTS)
+          layer.setLatLngs([ring])
+        }
+
+        if (ring.length < MIN_POINTS) {
+          onStatus?.(`At least ${MIN_POINTS} points required.`)
+          return
+        }
+
         onEdited?.(layer)
+        onStatus?.(`Field updated (${ring.length} points).`)
       })
-      onStatus?.('Field updated.')
-    }
-
-    const isPolygonDrawModeActive = () => {
-      try {
-        const handler = drawControl?._toolbars?.draw?._modes?.polygon?.handler
-        return typeof handler?.enabled === 'function' ? handler.enabled() : false
-      } catch {
-        return false
-      }
-    }
-
-    const getRingLatLngs = (layer) => {
-      const latLngs = layer?.getLatLngs?.()
-      return Array.isArray(latLngs?.[0]) ? latLngs[0] : latLngs
-    }
-
-    const onMapClick = (e) => {
-      // If user is actively drawing, let leaflet-draw handle clicks.
-      if (isPolygonDrawModeActive()) return
-      if (!activePolygonLayer) return
-
-      // If layer was cleared externally, stop tracking it.
-      if (typeof fg?.hasLayer === 'function' && !fg.hasLayer(activePolygonLayer)) {
-        activePolygonLayer = null
-        return
-      }
-
-      const ring = getRingLatLngs(activePolygonLayer) || []
-
-      if (ring.length >= MAX_POINTS) {
-        onStatus?.(`Maximum ${MAX_POINTS} points reached.`)
-        return
-      }
-
-      const nextRing = [...ring, e.latlng]
-      activePolygonLayer.setLatLngs([nextRing])
-      activePolygonLayer.redraw?.()
-      onEdited?.(activePolygonLayer)
-      onStatus?.(`Point added (${nextRing.length}/${MAX_POINTS}).`)
     }
 
     map.on(L.Draw.Event.CREATED, onDrawCreated)
     map.on(L.Draw.Event.EDITED, onDrawEdited)
-    map.on('click', onMapClick)
 
     return () => {
       map.off(L.Draw.Event.CREATED, onDrawCreated)
       map.off(L.Draw.Event.EDITED, onDrawEdited)
-      map.off('click', onMapClick)
       map.removeControl(drawControl)
-      map.removeLayer(fg)
+      map.removeLayer(featureGroup)
       fgRef.current = null
-      activePolygonLayer = null
     }
-  }, [fgRef, map, onCreated, onEdited, onStatus])
+  }, [map, fgRef, onCreated, onEdited, onStatus])
 
   return null
 }

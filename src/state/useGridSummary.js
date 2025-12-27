@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { onValue, ref } from 'firebase/database'
 import { db } from '../config/firebase.js'
-import { getCurrentFarmId } from './farmSession.js'
+import { useAuth } from '../auth/AuthProvider.jsx'
 
 // Minimal state hook for demo.
 // Expected DB shape (example):
@@ -13,23 +13,19 @@ import { getCurrentFarmId } from './farmSession.js'
 export function useGridSummary() {
   const [grid, setGrid] = useState(null)
   const [variance, setVariance] = useState(null)
-  const [profileName, setProfileName] = useState(null)
-
-  const farmId = useMemo(() => getCurrentFarmId(), [])
+  const { user, profile } = useAuth()
 
   useEffect(() => {
-    if (!db || !farmId) return undefined
+    if (!db || !user?.uid) return undefined
 
-    const offGrid = onValue(ref(db, `cpde/v1/farms/${farmId}/grid`), (snap) => setGrid(snap.val()))
-    const offVar = onValue(ref(db, `cpde/v1/farms/${farmId}/variance/last30`), (snap) => setVariance(snap.val()))
-    const offName = onValue(ref(db, `cpde/v1/farms/${farmId}/profile/farmerName`), (snap) => setProfileName(snap.val()))
+    const offGrid = onValue(ref(db, `users/${user.uid}/grid`), (snap) => setGrid(snap.val()))
+    const offVar = onValue(ref(db, `users/${user.uid}/variance/last30`), (snap) => setVariance(snap.val()))
 
     return () => {
       offGrid()
       offVar()
-      offName()
     }
-  }, [farmId])
+  }, [user?.uid])
 
   return useMemo(() => {
     const cells = grid?.cells || {}
@@ -40,13 +36,13 @@ export function useGridSummary() {
     const riskLevel = redZones > 0 ? 'High' : yellowZones > 0 ? 'Medium' : 'Low'
 
     return {
-      farmerName: profileName || 'Farmer',
+      farmerName: profile?.farmerName || 'Farmer',
       riskLevel,
       redZones,
       yellowZones,
       last30VarianceScores: Array.isArray(variance) ? variance : makeDemoVariance(),
     }
-  }, [grid, variance, profileName])
+  }, [grid, variance, profile?.farmerName])
 }
 
 function makeDemoVariance() {
