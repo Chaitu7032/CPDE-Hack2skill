@@ -1,13 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
-import { get, limitToLast, onValue, orderByChild, push, query, ref, serverTimestamp, set } from 'firebase/database'
+import { get, onValue, push, ref, serverTimestamp, set } from 'firebase/database'
 import { auth, db, isFirebaseConfigured } from '../config/firebase.js'
 
-const AuthContext = createContext({
-  user: null,
-  profile: null,
-  loading: true,
-})
+import { AuthContext } from './useAuth.js'
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -111,10 +107,6 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({ user, profile, loading }), [user, profile, loading])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-}
-
-export function useAuth() {
-  return useContext(AuthContext)
 }
 
 function safeGetLocalStorage(key) {

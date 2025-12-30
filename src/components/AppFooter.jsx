@@ -1,5 +1,6 @@
 import { Box, Container, Divider, Stack, Typography, Link } from '@mui/material'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
+import { alpha } from '@mui/material/styles'
 
 export default function AppFooter() {
   const location = useLocation()
@@ -17,7 +18,7 @@ export default function AppFooter() {
   const activePath = location.pathname
 
   return (
-    <Box component="footer" sx={{ mt: 'auto', bgcolor: 'background.paper' }}>
+    <Box component="footer" sx={(theme) => ({ mt: 'auto', bgcolor: theme.palette.cpde.footerBg })}>
       <Divider />
       <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 2.5 } }}>
         <Stack
@@ -27,10 +28,16 @@ export default function AppFooter() {
           justifyContent="space-between"
         >
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 800, color: 'text.primary' }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 800, color: 'common.white' }}>
               © 2025 CPDE – Crop Failure Pre‑Cause Detection Engine
             </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary' }}>
+            <Typography
+              sx={(theme) => ({
+                fontSize: 12,
+                fontWeight: 700,
+                color: alpha(theme.palette.cpde.footerSecondaryText, 0.82),
+              })}
+            >
               Academic / Research Prototype
             </Typography>
           </Box>
@@ -48,12 +55,12 @@ export default function AppFooter() {
                 component={RouterLink}
                 to={l.to}
                 underline="none"
-                sx={{
+                sx={(theme) => ({
                   fontSize: 12.5,
                   fontWeight: 800,
-                  color: activePath === l.to.split('#')[0] ? 'primary.main' : 'text.secondary',
-                  '&:hover': { color: 'primary.main' },
-                }}
+                  color: activePath === l.to.split('#')[0] ? theme.palette.cpde.footerLink : alpha(theme.palette.cpde.footerLink, 0.9),
+                  '&:hover': { color: theme.palette.cpde.footerLinkHover },
+                })}
               >
                 {l.label}
               </Link>
@@ -61,13 +68,29 @@ export default function AppFooter() {
           </Stack>
 
           <Box sx={{ textAlign: { xs: 'left', md: 'right' } }}>
-            <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: 'text.primary' }}>
-              System Status: <Box component="span" sx={{ color: 'success.main' }}>●</Box> Online
+            <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: 'common.white' }}>
+              System Status:{' '}
+              <Box component="span" sx={(theme) => ({ color: theme.palette.cpde.footerStatusOnline })}>
+                ●
+              </Box>{' '}
+              Online
             </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary' }}>
+            <Typography
+              sx={(theme) => ({
+                fontSize: 12,
+                fontWeight: 700,
+                color: alpha(theme.palette.cpde.footerSecondaryText, 0.82),
+              })}
+            >
               Version: v1.0
             </Typography>
-            <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary' }}>
+            <Typography
+              sx={(theme) => ({
+                fontSize: 12,
+                fontWeight: 700,
+                color: alpha(theme.palette.cpde.footerSecondaryText, 0.82),
+              })}
+            >
               Data: OpenStreetMap + Sensor Simulation
             </Typography>
           </Box>

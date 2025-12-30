@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { signOut } from 'firebase/auth'
 
 import cpdeLogo from '../assets/image-removebg-preview (4).png'
-import { useAuth } from '../auth/AuthProvider.jsx'
+import { useAuth } from '../auth/useAuth.js'
 import { auth } from '../config/firebase.js'
 import AppFooter from './AppFooter.jsx'
 
@@ -37,13 +37,13 @@ export default function AppShell() {
     () =>
       isPublicTopBar
         ? {
-            bgcolor: 'primary.main',
+            bgcolor: (theme) => theme.palette.cpde.kellyGreen,
             color: 'common.white',
             borderBottom: '1px solid',
             borderColor: 'rgba(255,255,255,0.16)',
           }
         : {
-            bgcolor: 'primary.main',
+            bgcolor: (theme) => theme.palette.cpde.kellyGreen,
             color: 'common.white',
             borderBottom: '1px solid',
             borderColor: 'rgba(255,255,255,0.16)',

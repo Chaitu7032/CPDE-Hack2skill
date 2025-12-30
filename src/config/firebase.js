@@ -19,7 +19,6 @@ const missing = Object.entries(firebaseConfig)
 
 if (missing.length) {
   // Intentionally a console warning (not throw) so UI can load in demo mode.
-  // eslint-disable-next-line no-console
   console.warn(
     `[CPDE] Missing Firebase env vars: ${missing.join(', ')}. ` +
       'Add them to a local .env (see .env.example).',

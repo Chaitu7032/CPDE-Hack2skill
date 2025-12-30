@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { onValue, ref } from 'firebase/database'
 import { db } from '../config/firebase.js'
-import { useAuth } from '../auth/AuthProvider.jsx'
+import { useAuth } from '../auth/useAuth.js'
 
 // Minimal state hook for demo.
 // Expected DB shape (example):

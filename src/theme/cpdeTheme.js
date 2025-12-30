@@ -4,6 +4,15 @@ export const cpdeTheme = createTheme({
   palette: {
     mode: 'light',
     primary: { main: '#1f7a4d' },
+    cpde: {
+      kellyGreen: '#1F6F43',
+      registrationOrange: '#E07A2D',
+      footerBg: '#2F6F44',
+      footerLink: '#FFFFFF',
+      footerLinkHover: '#A7E3B2',
+      footerSecondaryText: '#FFFFFF',
+      footerStatusOnline: '#1E8E3E',
+    },
     // Keep a green-forward secondary for outlines/accents.
     secondary: { main: '#2f8f5b', light: '#e8f5ee' },
     background: { default: '#F6F8F7', paper: '#FFFFFF' },

@@ -9,7 +9,6 @@ function lcg(seed) {
   // Deterministic PRNG (0..1)
   let s = seed >>> 0
   return function next() {
-    // eslint-disable-next-line no-bitwise
     s = (1664525 * s + 1013904223) >>> 0
     return s / 4294967296
   }
@@ -18,12 +17,9 @@ function lcg(seed) {
 function seedFromId(id) {
   let seed = 2166136261
   for (let i = 0; i < id.length; i += 1) {
-    // eslint-disable-next-line no-bitwise
     seed ^= id.charCodeAt(i)
-    // eslint-disable-next-line no-bitwise
     seed = Math.imul(seed, 16777619)
   }
-  // eslint-disable-next-line no-bitwise
   return seed >>> 0
 }
 

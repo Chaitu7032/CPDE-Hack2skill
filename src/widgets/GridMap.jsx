@@ -16,7 +16,7 @@ import { db } from '../config/firebase.js'
 import { generatePlainEnglishRiskExplanation } from '../config/gemini.js'
 import { MapContainer, TileLayer, Polygon, Rectangle, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useAuth } from '../auth/AuthProvider.jsx'
+import { useAuth } from '../auth/useAuth.js'
 
 // Core feature: Google Maps + OverlayView NxN grid.
 // Data source: Firebase RTDB at /cpde/demo/grid/cells
@@ -43,9 +43,11 @@ export default function GridMap({ gridSize = 8 }) {
   // Subscribe to Firebase stream
   useEffect(() => {
     if (!db || !user?.uid) {
-      setCells({})
-      setFieldPolygon(DEMO_FIELD)
-      return undefined
+      const t = setTimeout(() => {
+        setCells({})
+        setFieldPolygon(DEMO_FIELD)
+      }, 0)
+      return () => clearTimeout(t)
     }
 
     const offCells = onValue(ref(db, `users/${user.uid}/grid/cells`), (snap) => setCells(snap.val() || {}))

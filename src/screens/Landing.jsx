@@ -1,4 +1,5 @@
 import { Box, Button, Card, CardContent, Container, Grid, Stack, Typography } from '@mui/material'
+import { darken } from '@mui/material/styles'
 import CloudQueueIcon from '@mui/icons-material/CloudQueue'
 import GrassIcon from '@mui/icons-material/Grass'
 import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'
@@ -7,7 +8,7 @@ import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import heroBg from '../assets/background.png'
-import { useAuth } from '../auth/AuthProvider.jsx'
+import { useAuth } from '../auth/useAuth.js'
 
 export default function Landing() {
   const navigate = useNavigate()
@@ -105,15 +106,15 @@ export default function Landing() {
                 size="large"
                 onClick={() => navigate('/register')}
                 aria-label="New registration"
-                sx={{
-                  bgcolor: '#E47F37',
+                sx={(theme) => ({
+                  bgcolor: theme.palette.cpde.registrationOrange,
                   fontFamily: 'Poppins, sans-serif',
                   fontWeight: 800,
                   textTransform: 'none',
                   px: 3,
                   py: 1.2,
-                  '&:hover': { bgcolor: '#CC6E2F' },
-                }}
+                  '&:hover': { bgcolor: darken(theme.palette.cpde.registrationOrange, 0.12) },
+                })}
               >
                 New Registration
               </Button>
