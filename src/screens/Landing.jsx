@@ -120,6 +120,18 @@ export default function Landing() {
               </Button>
             </Stack>
 
+            <Typography
+              sx={{
+                mt: 1.25,
+                fontFamily: 'Poppins, sans-serif',
+                color: 'rgba(0,0,0,0.65)',
+                fontSize: { xs: 13, md: 14 },
+                fontWeight: 600,
+              }}
+            >
+              Haven&apos;t registered yet ?  Register to create your login.
+            </Typography>
+
             <Box
               sx={{
                 mt: 3,
